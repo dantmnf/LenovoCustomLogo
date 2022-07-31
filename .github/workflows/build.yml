@@ -18,7 +18,7 @@ jobs:
     - name: dotnet publish
       shell: cmd
       run: |
-        dotnet publish -o bin\publish -c Release -p:PublishSingleFile=true -r win-x64
+        dotnet publish -o bin\publish -c Release -r win-x64
     - name: artifact
       uses: actions/upload-artifact@v1.0.0
       with:
