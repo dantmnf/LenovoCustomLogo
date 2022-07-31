@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -24,6 +25,10 @@ namespace LenovoCustomLogo
             JPG = 1,
             BMP = 0x10,
             PNG = 0x20,
+        }
+
+        private static string LogoFormatToString(LogoFormat value) {
+            return string.Join(", ", Enum.GetValues<LogoFormat>().Where(x => value.HasFlag(x)).Select(x => x.ToString()));
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -214,7 +219,8 @@ namespace LenovoCustomLogo
 
                 PromotePrivileges();
                 var info = ReadLogoInfo();
-                var prefix = Path.Combine(efivol, "EFI", "Lenovo", "Logo", $"mylogo_{info.Width}x{info.Height}");
+                var logodir = Path.Combine(efivol, "EFI", "Lenovo", "Logo");
+                var prefix = Path.Combine(logodir, $"mylogo_{info.Width}x{info.Height}");
                 string logofile;
                 using var bmp = Image.FromFile(filename);
                 bool needConvert = false;
@@ -238,6 +244,7 @@ namespace LenovoCustomLogo
                 try
                 {
                     Console.WriteLine("Writing {0}", logofile);
+                    Directory.CreateDirectory(logodir);
                     if (needConvert)
                     {
                         using var fs = File.OpenWrite(logofile);
@@ -250,11 +257,16 @@ namespace LenovoCustomLogo
                 }
                 catch (IOException e)
                 {
-                    File.Delete(logofile);
+                    try
+                    {
+                        File.Delete(logofile);
+                    }
+                    catch { }
                     throw e;
                 }
                 info.Enabled = 1;
                 var crc = GetLogoFileCrc(logofile);
+                Console.WriteLine("Setting EFI variables");
                 WriteLogoInfo(info);
                 WriteLogoCrc(crc);
             }
@@ -266,6 +278,7 @@ namespace LenovoCustomLogo
                     return 1;
                 }
                 PromotePrivileges();
+                Console.WriteLine("Setting EFI variables");
                 var info = ReadLogoInfo();
                 info.Enabled = 0;
                 WriteLogoInfo(info);
